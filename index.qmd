@@ -3,12 +3,12 @@ title: "Statistische Modellierung mit R"
 subtitle: "Ein Workshop für die PH Zürich"
 date: 2025-10-17
 format:
-    html: 
-      self-contained: true
-      grid: 
-        margin-width: 350px
-    pdf: 
-      pdf-engine: xelatex
+  html:
+    toc: true
+    toc-depth: 4
+    self-contained: true
+    grid: 
+      margin-width: 350px
 brand:
   color:
     link: "#1bbc9d"
@@ -97,38 +97,75 @@ $$y_i \sim \mathcal{N}\left( b_0 + b_1*x_i, \sigma \right)$$
 ## Datengrundlage
 Das wollen wir den berühmten Daten aus dem STAR-Experiment (Student/Teacher Achievement Ratio) illustrieren. In diesem Experiment wurden in Tennessee Schüler:innen zufällig auf Klassen mit kleiner (13-17 Schüler:innen pro Lehrer:in) und großer (22-25 Schüler:innen pro Lehrer:in) Klassengröße zugeteilt. Zusätzlich gab es Klassen großer Größe, die von einer:n ausgebildeten Hilfslehrer:in unterstützt wurde. Die Schüler:innen wurden über mehrere Jahre getestet.
 
-Wir können die Daten 
+Wir können die Daten [herunterladen](https://github.com/sammerk/Zuerich_Statistics/tree/master/data) oder direkt programmatisch importieren.
+
 ```{r}
-## Laden der Bibliotheken 
-library(ggplot2)  # plots
-library(dplyr)    # datawrangling
-library(readr)    # data import
-library(ggforce)  # sina plots
+library(readr) # für den data import
+library(dplyr)    # für das datawrangling
+data_star <-
+  readr::read_csv(
+    paste0(
+      "https://raw.githubusercontent.com/sammerk/",
+      "Zuerich_Statistics/master/data/star.csv"
+    )
+  )
+```
+
+Der Satzsatz sieht wie folgt aus:
+
+```{r}
+glimpse(data_star)
+```
+
+Die Variablen dieses Datensatzes sind die folgenden:
+
+* `id`: a factor - student id number
+* `sch`: a factor - school id number
+* `gr`: grade - an ordered factor with levels K < 1 < 2 < 3
+* `cltype`: class type - a factor with levels small, reg and reg+A. The last level indicates a regular class size with a teachers aide.
+* `hdeg`: highest degree obtained by the teacher - an ordered factor with levels ASSOC < BS/BA < MS/MA/MEd < MA+ < Ed.S < Ed.D/Ph.D
+* `clad`: career ladder position of the teacher - a factor with levels NOT APPR PROB PEND 1 2 3
+* `exp`: a numeric vector - the total number of years of experience of the teacher
+* `trace`: teacher's race - a factor with levels W, B, A, H, I and O representing white, black, Asian, Hispanic, Indian (Native American) and other
+* `read`: the student's total reading scaled score
+* `math`: the student's total math scaled score
+* `ses`: socioeconomic status - a factor with levels F and N representing eligible for free lunches or not eligible
+* `schtype`: school type - a factor with levels inner, suburb, rural and urban
+* `sx`: student's sex - a factor with levels M F
+* `eth`: student's ethnicity - a factor with the same levels as trace
+* `birthq`: student's birth quarter - an ordered factor with levels 1977:1 < ... < 1982:2
+* `birthy`: student's birth year - an ordered factor with levels 1977:1982
+* `yrs`: number of years of schooling for the student - a numeric version of the grade gr with Kindergarten represented as 0. This variable was generated from gr and does not allow for a student being retained.
+* `tch`: a factor - teacher id number
 
 
-## Import der Daten ############################################################
-data_star <- read_csv("data/star.csv")
-# die Erklärung der Variablennamen kann mit `?mlmRev::star` aufgerufen werden
+Um nicht gleich mit Mehrebenenregression starten zu müssen, erstellen wir als erstes einen Subdatensatz, der nur eine:n Schüler:in pro Lehrer:in enthält
 
-## Einfache lineare Regression #################################################
-
-# Um nicht gleich mit Mehrebenenregression starten zu müssen, erstellen wir als
-# erstes einen Subdatensatz, der nur eine:n Schüler:in pro Lehrer:in enthält
-
+```{r}
 data_star_sub <- 
 	data_star %>% 
 	group_by(tch) %>% 
 	sample_n(1) %>% 
 	ungroup()
+```
 
-## »Effekt« der Klasse
+## »Effekte« der Klassenstufe
+### Einfache lineare Regression
+Zunächst wollen wir »Effekte« der Klassenstufe modellieren. Ich empfehle dringend kosequent Daten erst zu visualisieren und dann statistisch zu modellieren.
+
+```{r}
+library(ggplot2)  # plots
+library(ggforce)  # sina plots
+
 ggplot(data_star_sub, aes(gr, math)) +
 	geom_jitter() +
-	#facet_wrap(~gr) +
 	theme_minimal()
+```
 
-# Das Schuljahr K muss also zu 0 rekodiert werden
+Die unabhängige Variable ist hier noch nicht intervallskaliert. Dies können wir wie folgt ändern.
 
+```{r}
+# Das Schuljahr K zu 0 rekodieren
 data_star_sub <- 
 	data_star_sub %>% 
 	mutate(grade = case_when(gr == "K" ~ 0,
@@ -136,11 +173,45 @@ data_star_sub <-
 													 gr == "2" ~ 2,
 													 gr == "3" ~ 3
 													 ))
-
+# Anschließend nochmals visualisieren
 ggplot(data_star_sub, aes(grade, math)) +
 	geom_jitter() +
 	theme_minimal()
+```
 
+
+Dann kann eine erste Regressionsgerade modelliert werden.
+
+#### Frequentistische Punktschätzung
+Mit der Funktion `lm()` werden mithilfe kleinster Quadrate $b_0$ und $b_1$ geschätzt. 
+
+```{r}
 mod0 <- lm(math ~ grade, data = data_star_sub)
+mod0
+```
+
+#### Frequentistischer Nullhypothesensignifikanztest
+Die Standardinferenzstatistik zu einem solchen Modell ist sind p-Werte für die Nullhypothesen 
+$$H_0:\; b_0 = 0$$
+$$H_0:\; b_1 = 0$$
+
+```{r}
 summary(mod0)
 ```
+
+#### Frequentistische Konfidenzintervalle
+```{r}
+confint(mod0)
+```
+
+#### Bayesianische Posterior Distributions
+```{r}
+library(MCMCpack) #für bayesianische Schätzung
+mod1 <- MCMCregress(math ~ grade, data = data_star_sub)
+
+plot(mod1)
+summary(mod1)
+```
+
+Während die Densityplots den Posterior der Schätzung Charakterisieren erhält man mit `summary()` auch die 95%HDI-Intervalle.
+

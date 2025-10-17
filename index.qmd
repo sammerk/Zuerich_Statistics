@@ -13,8 +13,7 @@ format:
 brand:
   color:
     link: "#1bbc9d"
-execute: 
-  echo: fenced
+
 lang: de
 reference-location: margin
 #citation-location: margin
@@ -104,15 +103,13 @@ Wir können die Daten [herunterladen](https://github.com/sammerk/Zuerich_Statist
 #| message: false
 library(readr) # für den data import
 library(dplyr)    # für das datawrangling
-#data_star <-
-#  readr::read_csv(
-#    paste0(
-#      "https://raw.githubusercontent.com/sammerk/",
-#      "Zuerich_Statistics/master/data/star.csv"
-#    )
-#  )
 data_star <-
-  readr::read_csv("data/star.csv")
+  readr::read_csv(
+    paste0(
+      "https://raw.githubusercontent.com/sammerk/",
+      "Zuerich_Statistics/master/data/star.csv"
+    )
+  )
 
 ```
 

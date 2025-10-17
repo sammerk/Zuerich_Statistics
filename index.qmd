@@ -5,6 +5,7 @@ date: 2025-10-17
 format:
   html:
     toc: true
+    toc-location: left
     toc-depth: 4
     self-contained: true
     grid: 

@@ -369,3 +369,22 @@ star_plot <- add_trace(
 
 star_plot
 ```
+
+
+### Informative Hypothesentests in der multiplen Regression
+
+```{r}
+# Informative Hypothese
+library(bain)
+
+## ANOVA als Regression
+
+data_star_sub <- data_star_sub %>% 
+	mutate(classtype = ifelse(cltype == "reg+A",
+														"regA",  cltype))
+
+mod5 <- lm(math ~ classtype - 1, data = data_star_sub) # Intercept mit `-1` entfernt
+mod5
+
+bain(mod5, "classtypereg = classtyperegA = classtypesmall; classtypereg < classtyperegA < classtypesmall")
+```
